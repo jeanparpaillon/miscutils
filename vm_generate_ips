@@ -1,0 +1,21 @@
+#!/usr/bin/env escript
+%% -*- coding: utf-8; mode: erlang -*-
+%%! -smp auto
+
+-define(BASE_IP, {192,168,122}).
+-define(BASE_MAC, {82,84,0}).
+
+gen_mac(Base) ->
+    io_lib:format("~2.16.0b:~2.16.0b:~2.16.0b:~2.16.0b:~2.16.0b:~2.16.0b", 
+		  [element(1,Base),element(2,Base),element(3,Base),
+		   random:uniform(255),random:uniform(255),random:uniform(255)]).
+
+gen_ip(Base, N) ->
+    io_lib:format("~b.~b.~b.~b", 
+		  [element(1,Base),element(2,Base),element(3,Base),N]).
+
+main([]) ->
+    F = fun(X) ->
+		io:format("~s,~s,vm~3..0b~n", [gen_mac(?BASE_MAC),gen_ip(?BASE_IP,X),X])
+	end,
+    lists:foreach(F, lists:seq(110, 150)).

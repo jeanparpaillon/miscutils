@@ -1,0 +1,58 @@
+#!/bin/bash
+
+on_exit() {
+    rm -r $tmpd
+}
+
+usage() {
+    echo "Usage: $0 orig dest"
+}
+
+if test `id -u` -ne 0; then
+    sudo $0 $@
+    exit 0
+fi
+
+tmpd=$(mktemp -d)
+
+trap on_exit EXIT
+
+if test $# -ne 2; then
+    usage
+    exit 1
+fi
+
+connect=qemu:///system
+basedir=/var/lib/libvirt
+hosts=$basedir/dnsmasq/default.hostsfile
+modify_xsl=@datadir@/vm_modify.xsl
+
+orig=$1
+dest=$2
+
+origimg=$basedir/images/ubuntu-1204-ro.qcow2
+destimg=$basedir/images/$dest.qcow2
+
+if ! virsh -c $connect list --all --name | grep -q $orig; then
+    echo "$orig is not an existing domain"
+    exit 2
+fi
+if ! egrep -q ','$dest'$' $hosts; then
+    echo "$dest is not a valid vm name"
+    exit 2
+fi
+
+## Clone image
+qemu-img create -f qcow2 -b $origimg $destimg > /dev/null
+
+mac=$(cat $hosts | awk -e 'BEGIN { FS="," }; /.*,'$dest'$/ { print $1 }')
+virsh dumpxml $orig > $tmpd/base.xml
+xsltproc \
+    --stringparam name "$dest" \
+    --stringparam uuid "$(uuidgen)" \
+    --stringparam device-path "$destimg" \
+    --stringparam mac-address "$mac" \
+    $modify_xsl $tmpd/base.xml > $tmpd/$dest.xml
+virsh define $tmpd/$dest.xml
+
+exit 0
