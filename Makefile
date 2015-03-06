@@ -8,23 +8,30 @@ install_data = install -o root -g root -m 644
 programs = vm_clone vm_generate_ips
 data = vm_modify.xsl
 
-edit = sed -e \
-	's,@bindir@,'$(bindir)',' \
-	's,@datadir@,'$(datadir)','
+V=0
+
+gen_v = $(gen_v_$(V))
+gen_v_ = 
+gen_v_0 = @echo "       GEN" $@;
+
+edit = sed \
+	-e 's,@bindir@,'$(bindir)',' \
+	-e 's,@datadir@,'$(datadir)','
 
 all: $(programs)
 
-%: %.in
-	$(edit) < $< > $@
+vm_clone: vm_clone.in
+	$(gen_v) $(edit) < $< > $@
+	@chmod 755 $@
 
 install: $(programs)
-	mkdir -p $(bindir)
-	for bin in $(programs); do \
-	  $(install_bin) $$bin $(bindir); \
+	@mkdir -p $(bindir)
+	@for bin in $(programs); do \
+	  echo " INSTALL" $$bin; $(install_bin) $$bin $(bindir); \
 	done
-	mkdir -p $(datadir)
-	for data in $(data); do \
-	  $(install_data) $$data $(datadir); \
+	@mkdir -p $(datadir)
+	@for d in $(data); do \
+	  echo " INSTALL" $$d; $(install_data) $$d $(datadir); \
 	done
 
 clean:
